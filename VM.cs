@@ -307,6 +307,8 @@ namespace STM32Programmer
             var ports = SerialPortSearcher.Instance.Value.PortNames.ToList();
             ports.Sort(String.CompareOrdinal);
 
+            SerialPortList.Clear();
+            ;
             foreach (var portName in ports)
             {
                 SerialPortList.Add(portName);
