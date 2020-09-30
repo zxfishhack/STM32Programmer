@@ -101,53 +101,62 @@ namespace STM32Programmer.Programmer
         public bool Parse(string fn, int maxBlockSize = 256)
         {
             var ret = false;
-            var reader = File.OpenText(fn);
-            string line;
-            UInt32 addrPrefix = 0;
-            while ((line = reader.ReadLine()) != null)
+            try
             {
-                HexLine hexLine = new HexLine();
-                if (!hexLine.Parse(line))
+                using (var reader = File.OpenText(fn))
                 {
-                    return false;
-                }
+                    string line;
+                    UInt32 addrPrefix = 0;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        HexLine hexLine = new HexLine();
+                        if (!hexLine.Parse(line))
+                        {
+                            return false;
+                        }
 
-                if (hexLine.Type == HexLine.HexLineType.ExtendedLinearAddress)
-                {
-                    addrPrefix = hexLine.Addr << 16;
-                }
-                else if (hexLine.Type == HexLine.HexLineType.StartLinearAddress)
-                {
-                    EntryPoint = hexLine.Addr;
-                }
-                else if (hexLine.Type == HexLine.HexLineType.EndOfFile)
-                {
-                    ret = true;
-                    break;
-                }
-                else if (hexLine.Type == HexLine.HexLineType.Data)
-                {
-                    var addr = addrPrefix | hexLine.Addr;
-                    MemoryBlock block = null;
-                    try
-                    {
-                        block = Blocks.Find(v =>
-                            v.StartAddr < addr && v.StartAddr + v.Length == addr && v.Length + hexLine.Content.Length <= maxBlockSize);
+                        if (hexLine.Type == HexLine.HexLineType.ExtendedLinearAddress)
+                        {
+                            addrPrefix = hexLine.Addr << 16;
+                        }
+                        else if (hexLine.Type == HexLine.HexLineType.StartLinearAddress)
+                        {
+                            EntryPoint = hexLine.Addr;
+                        }
+                        else if (hexLine.Type == HexLine.HexLineType.EndOfFile)
+                        {
+                            ret = true;
+                            break;
+                        }
+                        else if (hexLine.Type == HexLine.HexLineType.Data)
+                        {
+                            var addr = addrPrefix | hexLine.Addr;
+                            MemoryBlock block = null;
+                            try
+                            {
+                                block = Blocks.Find(v =>
+                                    v.StartAddr < addr && v.StartAddr + v.Length == addr && v.Length + hexLine.Content.Length <= maxBlockSize);
+                            }
+                            catch (Exception)
+                            {
+                                // ignore
+                            }
+                            if (block == null)
+                            {
+                                block = new MemoryBlock();
+                                block.StartAddr = addr;
+                                Blocks.Add(block);
+                            }
+                            block.Content.AddRange(hexLine.Content);
+                        }
                     }
-                    catch (Exception)
-                    {
-                        // ignore
-                    }
-                    if (block == null)
-                    {
-                        block = new MemoryBlock();
-                        block.StartAddr = addr;
-                        Blocks.Add(block);
-                    }
-                    block.Content.AddRange(hexLine.Content);
                 }
             }
-            
+            catch (Exception )
+            {
+                // ignore
+            }
+
             return ret;
         }
     }
